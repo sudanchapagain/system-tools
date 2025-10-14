@@ -1,0 +1,50 @@
+name: Test
+
+on:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@cargo-nextest
+      - run: sudo apt install -y libwayland-dev wayland-protocols
+      - run: cargo build --workspace --locked --verbose
+      - run: cargo nextest run --workspace --locked
+
+  stable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-nextest
+      - run: sudo apt install -y libwayland-dev wayland-protocols
+      - run: cargo build --workspace --locked --verbose
+      - run: cargo nextest run --workspace --locked
+
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mozilla-actions/sccache-action@v0.0.9
+      - uses: SebRollen/toml-action@v1.0.2
+        id: msrv
+        with:
+          file: 'Cargo.toml'
+          field: 'workspace.package.rust-version'
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.value }}
+      - uses: taiki-e/install-action@cargo-nextest
+      - run: sudo apt install -y libwayland-dev wayland-protocols
+      - run: cargo build --workspace --locked --verbose
+      - run: cargo nextest run --workspace --locked

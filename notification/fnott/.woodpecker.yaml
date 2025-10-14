@@ -1,0 +1,95 @@
+# -*- yaml -*-
+
+steps:
+  - name: codespell
+    when:
+      - event: [manual, pull_request]
+      - event: [push, tag]
+        branch: [master, releases/*]
+    image: alpine:latest
+    commands:
+      - apk add openssl
+      - apk add python3
+      - apk add py3-pip
+      - python3 -m venv codespell-venv
+      - source codespell-venv/bin/activate
+      - pip install codespell
+      - codespell README.md CHANGELOG.md *.c *.h doc/*.scd
+
+  - name: subprojects
+    when:
+      - event: [manual, pull_request]
+      - event: [push, tag]
+        branch: [master, releases/*]
+    image: alpine:latest
+    commands:
+      - apk add git
+      - mkdir -p subprojects && cd subprojects
+      - git clone https://codeberg.org/dnkl/tllist.git
+      - git clone https://codeberg.org/dnkl/fcft.git
+      - cd ..
+
+  - name: x64
+    when:
+      - event: [manual, pull_request]
+      - event: [push, tag]
+        branch: [master, releases/*]
+    depends_on: [subprojects]
+    image: alpine:latest
+    commands:
+      - apk update
+      - apk add musl-dev linux-headers meson ninja gcc clang scdoc
+      - apk add pixman-dev freetype-dev fontconfig-dev libpng-dev dbus-dev
+      - apk add wayland-dev wayland-protocols wlroots-dev
+      - apk add git
+
+      # Debug
+      - mkdir -p bld/debug-x64
+      - meson --buildtype=debug . bld/debug-x64
+      - ninja -C bld/debug-x64 -v -k0
+      - bld/debug-x64/fnott --version
+
+      # Release (gcc)
+      - mkdir -p bld/release-x64
+      - meson --buildtype=release . bld/release-x64
+      - ninja -C bld/release-x64 -v -k0
+      - bld/release-x64/fnott --version
+
+      # Release (clang)
+      - mkdir -p bld/release-x64-clang
+      - CC=clang meson --buildtype=release . bld/release-x64-clang
+      - ninja -C bld/release-x64-clang -v -k0
+      - bld/release-x64-clang/fnott --version
+
+
+  - name: x86
+    when:
+      - event: [manual, pull_request]
+      - event: [push, tag]
+        branch: [master, releases/*]
+    depends_on: [subprojects]
+    image: i386/alpine:latest
+    commands:
+      - apk update
+      - apk add musl-dev linux-headers meson ninja gcc clang scdoc
+      - apk add pixman-dev freetype-dev fontconfig-dev libpng-dev dbus-dev
+      - apk add wayland-dev wayland-protocols wlroots-dev
+      - apk add git
+
+      # Debug
+      - mkdir -p bld/debug-x86
+      - meson --buildtype=debug . bld/debug-x86
+      - ninja -C bld/debug-x86 -v -k0
+      - bld/debug-x86/fnott --version
+
+      # Release (gcc)
+      - mkdir -p bld/release-x86
+      - meson --buildtype=release . bld/release-x86
+      - ninja -C bld/release-x86 -v -k0
+      - bld/release-x86/fnott --version
+
+      # Release (clang)
+      - mkdir -p bld/release-x86-clang
+      - CC=clang meson --buildtype=release . bld/release-x86-clang
+      - ninja -C bld/release-x86-clang -v -k0
+      - bld/release-x86-clang/fnott --version

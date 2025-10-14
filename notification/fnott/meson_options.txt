@@ -1,0 +1,6 @@
+option('docs', type: 'feature',
+       description: 'Build and install documentation (man pages, example fnott.ini, readme, license etc).')
+option('system-nanosvg', type: 'feature', value: 'disabled',
+       description: 'use system\'s nanosvg instead of the bundled version')
+option('systemd-units-dir', type: 'string', value: '',
+      description: 'Where to install the systemd service files (absolute path). Default: ${systemduserunitdir}')

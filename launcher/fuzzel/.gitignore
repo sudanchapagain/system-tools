@@ -1,0 +1,6 @@
+/bld/
+/pkg/
+/src/
+/subprojects/*
+!/subprojects/*.wrap
+/.cache/

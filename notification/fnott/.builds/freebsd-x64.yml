@@ -1,0 +1,33 @@
+image: freebsd/latest
+packages:
+  - meson
+  - ninja
+  - scdoc
+  - pkgconf
+  - pixman
+  - freetype2
+  - fontconfig
+  - png
+  - dbus
+  - wayland
+  - wayland-protocols
+  - evdev-proto
+
+sources:
+  - https://git.sr.ht/~dnkl/fnott
+
+tasks:
+  - fcft: |
+      cd fnott/subprojects
+      git clone https://codeberg.org/dnkl/fcft.git
+      cd ../..
+  - debug: |
+      mkdir -p bld/debug
+      meson --buildtype=debug fnott bld/debug
+      ninja -C bld/debug -k0
+      meson test -C bld/debug --print-errorlogs
+  - release: |
+      mkdir -p bld/release
+      meson --buildtype=release fnott bld/release
+      ninja -C bld/release -k0
+      meson test -C bld/release --print-errorlogs

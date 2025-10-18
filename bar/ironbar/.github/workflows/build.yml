@@ -1,0 +1,145 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'src/**/*'
+      - 'Cargo.*'
+      - 'build.rs'
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - 'src/**/*'
+      - 'Cargo.*'
+      - 'build.rs'
+      - '.github/workflows/build.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: '-Dwarnings'
+
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    name: 'Formatting'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+
+  clippy-base:
+    runs-on: ubuntu-latest
+    container: ghcr.io/jakestanger/ironbar-build:master
+    name: 'Clippy (Base features)'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        name: Cache dependencies
+
+      - name: Clippy
+        run: cargo clippy --no-default-features --features config+json
+        env:
+          # Allow some warnings through as we'll never get it perfect in a zero-feature situation
+          RUSTFLAGS: '-A unused-imports -A unused-variables -A unused-mut -A dead-code'
+
+
+  clippy-all:
+    runs-on: ubuntu-latest
+    container: ghcr.io/jakestanger/ironbar-build:master
+    name: 'Clippy (All features)'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        name: Cache dependencies
+
+      - name: Clippy
+        run: cargo clippy --all-targets --all-features
+        env:
+          RUSTFLAGS: '-W clippy::unwrap_used'
+
+
+  build:
+    name: 'Build & Test'
+    runs-on: ubuntu-latest
+    container: ghcr.io/jakestanger/ironbar-build:master
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        name: Cache dependencies
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  feature-checks:
+    name: 'Check feature flag'
+    runs-on: ubuntu-latest
+    container: ghcr.io/jakestanger/ironbar-build:master
+
+    strategy:
+      fail-fast: false
+      matrix:
+        feature:
+          - http
+          - ipc
+          - cli
+          - config+all
+          - config+json
+          - config+yaml
+          - config+toml
+          - config+corn
+          - config+ron
+          - battery
+          - bindmode+all
+          - bindmode+sway
+          - bindmode+hyprland
+          - bluetooth
+          - cairo
+          - clipboard
+          - clock
+          - custom
+          - focused
+          - keyboard+all
+          - keyboard+sway
+          - keyboard+hyprland
+          - label
+          - launcher
+          - menu
+          - music+all
+          - music+mpris
+          - music+mpd
+          - network_manager
+          - notifications
+          - sys_info
+          - script
+          - tray
+          - volume
+          - workspaces+all
+          - workspaces+sway
+          - workspaces+hyprland
+          - workspaces+niri
+          - schema
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        name: Cache dependencies
+
+      - name: Check
+        run: cargo check --no-default-features --features ${{ matrix.feature }}
+        env:
+          # Allow some warnings through as we'll never get it perfect
+          RUSTFLAGS: '-A unused-imports -A unused-variables -A unused-mut -A dead-code'

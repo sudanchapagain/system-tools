@@ -1,4 +1,0 @@
-[submodule "external/wlr-protocols"]
-	path = external/wlr-protocols
-	url = https://gitlab.freedesktop.org/wlroots/wlr-protocols.git
-	branch = master

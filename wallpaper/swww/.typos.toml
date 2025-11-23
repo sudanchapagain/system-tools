@@ -1,3 +1,0 @@
-[default.extend-identifiers]
-# this is an actual function that exists in rust
-numer_denom_ms = "numer_denom_ms"

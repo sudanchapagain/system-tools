@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Exec=fnott
-Icon=notifications-symbolic
-Terminal=false
-Categories=System;Monitor;Core
-
-Name=Fnott
-Comment=Lightweight notifications daemon

@@ -1,5 +1,0 @@
-target/*
-completions/*
-tests/test_images/*
-# Nix
-result

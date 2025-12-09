@@ -1,0 +1,13 @@
+diff --git a/crates/uv/Cargo.toml b/crates/uv/Cargo.toml
+index 1c7d50516..72763cf87 100644
+--- a/crates/uv/Cargo.toml
++++ b/crates/uv/Cargo.toml
+@@ -155,7 +155,7 @@ ignored = [
+ ]
+ 
+ [features]
+-default = ["performance", "uv-distribution/static", "default-tests"]
++default = ["uv-distribution/static", "default-tests"]
+ native-auth = []
+ # Use better memory allocators, etc.
+ performance = ["performance-memory-allocator"]

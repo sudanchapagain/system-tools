@@ -1,0 +1,56 @@
+diff --git a/doc/haproxy.1 b/doc/haproxy.1
+index 4c2d78677..26f19f9e9 100644
+--- a/doc/haproxy.1
++++ b/doc/haproxy.1
+@@ -85,7 +85,7 @@ mode.
+ 
+ .TP
+ \fB\-Ws\fP
+-Start in master-worker mode with systemd notify support. It tells systemd when
++Start in master-worker mode with fd notify support. It tells dinit when
+ the process is ready. This mode forces foreground.
+ 
+ .TP
+diff --git a/src/cli.c b/src/cli.c
+index 4ab8713fa..a66eb392d 100644
+--- a/src/cli.c
++++ b/src/cli.c
+@@ -2634,8 +2634,16 @@ static int _send_status(char **args, char *payload, struct appctx *appctx, void
+ 	load_status = 1;
+ 	ha_notice("Loading success.\n");
+ 
+-	if (global.tune.options & GTUNE_USE_SYSTEMD)
+-		sd_notifyf(0, "READY=1\nMAINPID=%lu\nSTATUS=Ready.\n", (unsigned long)getpid());
++	if (global.tune.options & GTUNE_USE_SYSTEMD) {
++		const char *rvar = getenv("HAPROXY_READY_FD");
++		if (rvar && (global.mode & MODE_FOREGROUND)) {
++			int fdn = atoi(rvar);
++			if (fdn && !fcntl(fdn, F_GETFD)) {
++				write(fdn, "READY=1\n", sizeof("READY=1"));
++				close(fdn);
++			}
++		}
++	}
+ 
+ 	/* master and worker have successfully started, now we can set quiet mode
+ 	 * if MODE_DAEMON
+diff --git a/src/mworker.c b/src/mworker.c
+index 0d084b8fd..2faa3e5a8 100644
+--- a/src/mworker.c
++++ b/src/mworker.c
+@@ -504,10 +504,13 @@ static void mworker_on_new_child_failure()
+ 	usermsgs_clr(NULL);
+ 	load_status = 0;
+ 	ha_warning("Failed to load worker!\n");
+-	/* the sd_notify API is not able to send a reload failure signal. So
+-	 * the READY=1 signal still need to be sent */
++	/* the reexec is transparent to the supervisor and the fd that was
++	 * used for the notification is already gone, so do nothing here
++	*/
++	#if 0
+ 	if (global.tune.options & GTUNE_USE_SYSTEMD)
+ 		sd_notify(0, "READY=1\nSTATUS=Reload failed!\n");
++	#endif
+ }
+ 
+ /*

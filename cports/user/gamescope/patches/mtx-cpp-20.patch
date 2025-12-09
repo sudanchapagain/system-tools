@@ -1,0 +1,149 @@
+From 9b6167c4a6f0bf1a941d4cafee823655fe8f4d76 Mon Sep 17 00:00:00 2001
+From: q66 <q66@chimera-linux.org>
+Date: Wed, 21 Feb 2024 22:45:30 +0100
+Subject: [PATCH] sdlwindow: use a mutex instead of atomic shared_ptr
+
+libc++ does not implement this yet, and these are one-off events
+(not something to be run per frame) so it does not matter if it
+is a little bit slower
+---
+ src/sdlwindow.cpp | 40 +++++++++++++++++++++++++++++++---------
+ 1 file changed, 31 insertions(+), 9 deletions(-)
+
+--- a/src/Backends/SDLBackend.cpp
++++ b/src/Backends/SDLBackend.cpp
+@@ -179,13 +179,14 @@ namespace gamescope
+ 		std::vector<const char *> m_pszInstanceExtensions;
+ 
+ 		std::thread m_SDLThread;
++		std::mutex m_pSharedMutex;
+ 		std::atomic<SDLInitState> m_eSDLInit = { SDLInitState::SDLInit_Waiting };
+ 
+ 		std::atomic<bool> m_bApplicationGrabbed = { false };
+ 		std::atomic<bool> m_bApplicationVisible = { false };
+-		std::atomic<std::shared_ptr<INestedHints::CursorInfo>> m_pApplicationCursor;
+-		std::atomic<std::shared_ptr<std::string>> m_pApplicationTitle;
+-		std::atomic<std::shared_ptr<std::vector<uint32_t>>> m_pApplicationIcon;
++		std::shared_ptr<INestedHints::CursorInfo> m_pApplicationCursor;
++		std::shared_ptr<std::string> m_pApplicationTitle;
++		std::shared_ptr<std::vector<uint32_t>> m_pApplicationIcon;
+ 		SDL_Surface *m_pIconSurface = nullptr;
+ 		SDL_Surface *m_pCursorSurface = nullptr;
+ 		SDL_Cursor *m_pCursor = nullptr;
+@@ -475,7 +476,10 @@ namespace gamescope
+ 
+ 	void CSDLBackend::SetCursorImage( std::shared_ptr<INestedHints::CursorInfo> info )
+ 	{
+-		m_pApplicationCursor = info;
++		{
++			std::lock_guard<std::mutex> g{m_pSharedMutex};
++			m_pApplicationCursor = info;
++		}
+ 		PushUserEvent( GAMESCOPE_SDL_EVENT_CURSOR );
+ 	}
+ 	void CSDLBackend::SetRelativeMouseMode( bool bRelative )
+@@ -490,12 +494,18 @@ namespace gamescope
+ 	}
+ 	void CSDLBackend::SetTitle( std::shared_ptr<std::string> szTitle )
+ 	{
+-		m_pApplicationTitle = szTitle;
++		{
++			std::lock_guard<std::mutex> g{m_pSharedMutex};
++			m_pApplicationTitle = szTitle;
++		}
+ 		PushUserEvent( GAMESCOPE_SDL_EVENT_TITLE );
+ 	}
+ 	void CSDLBackend::SetIcon( std::shared_ptr<std::vector<uint32_t>> uIconPixels )
+ 	{
+-		m_pApplicationIcon = uIconPixels;
++		{
++			std::lock_guard<std::mutex> g{m_pSharedMutex};
++			m_pApplicationIcon = uIconPixels;
++		}
+ 		PushUserEvent( GAMESCOPE_SDL_EVENT_ICON );
+ 	}
+ 
+@@ -842,7 +852,11 @@ namespace gamescope
+ 					}
+ 					else if ( event.type == GetUserEventIndex( GAMESCOPE_SDL_EVENT_TITLE ) )
+ 					{
+-						std::shared_ptr<std::string> pAppTitle = m_pApplicationTitle;
++						std::shared_ptr<std::string> pAppTitle;
++						{
++							std::lock_guard<std::mutex> g{m_pSharedMutex};
++							pAppTitle = m_pApplicationTitle;
++						}
+ 
+ 						std::string szTitle = pAppTitle ? *pAppTitle : "gamescope";
+ 						if ( g_bGrabbed )
+@@ -855,7 +869,11 @@ namespace gamescope
+ 					}
+ 					else if ( event.type == GetUserEventIndex( GAMESCOPE_SDL_EVENT_ICON ) )
+ 					{
+-						std::shared_ptr<std::vector<uint32_t>> pIcon = m_pApplicationIcon;
++						std::shared_ptr<std::vector<uint32_t>> pIcon;
++						{
++							std::lock_guard<std::mutex> g{m_pSharedMutex};
++							pIcon = m_pApplicationIcon;
++						}
+ 
+ 						if ( m_pIconSurface )
+ 						{
+@@ -883,7 +901,11 @@ namespace gamescope
+ 					}
+ 					else if ( event.type == GetUserEventIndex( GAMESCOPE_SDL_EVENT_CURSOR ) )
+ 					{
+-						std::shared_ptr<INestedHints::CursorInfo> pCursorInfo = m_pApplicationCursor;
++						std::shared_ptr<INestedHints::CursorInfo> pCursorInfo;
++						{
++							std::lock_guard<std::mutex> g{m_pSharedMutex};
++							pCursorInfo = m_pApplicationCursor;
++						}
+ 
+ 						if ( m_pCursorSurface )
+ 						{
+--- a/src/Backends/WaylandBackend.cpp
++++ b/src/Backends/WaylandBackend.cpp
+@@ -420,7 +420,8 @@ namespace gamescope
+         std::optional<wl_fixed_t> m_ofPendingCursorX;
+         std::optional<wl_fixed_t> m_ofPendingCursorY;
+ 
+-        std::atomic<std::shared_ptr<zwp_relative_pointer_v1>> m_pRelativePointer = nullptr;
++        std::mutex m_pRelativePointerMutex;
++        std::shared_ptr<zwp_relative_pointer_v1> m_pRelativePointer = nullptr;
+         std::unordered_set<uint32_t> m_uScancodesHeld;
+ 
+         void Wayland_Registry_Global( wl_registry *pRegistry, uint32_t uName, const char *pInterface, uint32_t uVersion );
+@@ -2418,12 +2419,17 @@ namespace gamescope
+         // This constructors/destructors the display's mutex, so should be safe to do across threads.
+         if ( !bRelative )
+         {
++            std::lock_guard<std::mutex> g{m_pRelativePointerMutex};
+             m_pRelativePointer = nullptr;
+         }
+         else
+         {
+             zwp_relative_pointer_v1 *pRelativePointer = zwp_relative_pointer_manager_v1_get_relative_pointer( m_pRelativePointerManager, m_pPointer );
+-            m_pRelativePointer = std::shared_ptr<zwp_relative_pointer_v1>{ pRelativePointer, []( zwp_relative_pointer_v1 *pObject ){ zwp_relative_pointer_v1_destroy( pObject ); } };
++            auto relp = std::shared_ptr<zwp_relative_pointer_v1>{ pRelativePointer, []( zwp_relative_pointer_v1 *pObject ){ zwp_relative_pointer_v1_destroy( pObject ); } };
++            {
++                std::lock_guard<std::mutex> g{m_pRelativePointerMutex};
++                m_pRelativePointer = std::move(relp);
++            }
+             zwp_relative_pointer_v1_add_listener( pRelativePointer, &s_RelativePointerListener, this );
+         }
+     }
+@@ -2596,8 +2602,11 @@ namespace gamescope
+     }
+     void CWaylandInputThread::Wayland_Pointer_Motion( wl_pointer *pPointer, uint32_t uTime, wl_fixed_t fSurfaceX, wl_fixed_t fSurfaceY )
+     {
+-        if ( m_pRelativePointer.load() != nullptr )
+-            return;
++        {
++            std::lock_guard<std::mutex> g{m_pRelativePointerMutex};
++            if ( m_pRelativePointer != nullptr )
++                return;
++        }
+ 
+         if ( !cv_wayland_mouse_warp_without_keyboard_focus && !m_bKeyboardEntered )
+         {

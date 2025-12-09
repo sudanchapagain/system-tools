@@ -1,0 +1,39 @@
+diff --git a/crates/ruff/Cargo.toml b/crates/ruff/Cargo.toml
+index dd57a9970..811602744 100644
+--- a/crates/ruff/Cargo.toml
++++ b/crates/ruff/Cargo.toml
+@@ -85,7 +85,7 @@ dist = true
+ [target.'cfg(target_os = "windows")'.dependencies]
+ mimalloc = { workspace = true }
+ 
+-[target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "aix"), not(target_os = "android"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64", target_arch = "riscv64")))'.dependencies]
++[target.'cfg(all(not(target_vendor = "chimera"), not(target_os = "windows"), not(target_os = "openbsd"), not(target_os = "aix"), not(target_os = "android"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64", target_arch = "riscv64")))'.dependencies]
+ tikv-jemallocator = { workspace = true }
+ 
+ [lints]
+diff --git a/crates/ruff/src/main.rs b/crates/ruff/src/main.rs
+index 62e4f85b6..bbc02bac6 100644
+--- a/crates/ruff/src/main.rs
++++ b/crates/ruff/src/main.rs
+@@ -12,6 +12,7 @@ use ruff::{ExitStatus, run};
+ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+ 
+ #[cfg(all(
++    not(target_vendor = "chimera"),
+     not(target_os = "windows"),
+     not(target_os = "openbsd"),
+     not(target_os = "aix"),
+diff --git a/crates/ruff_benchmark/Cargo.toml b/crates/ruff_benchmark/Cargo.toml
+index 92606c990..9c9a917d6 100644
+--- a/crates/ruff_benchmark/Cargo.toml
++++ b/crates/ruff_benchmark/Cargo.toml
+@@ -86,5 +86,5 @@ walltime = ["ruff_db/os", "ty_project", "divan"]
+ [target.'cfg(target_os = "windows")'.dev-dependencies]
+ mimalloc = { workspace = true }
+ 
+-[target.'cfg(all(not(target_os = "windows"), not(target_os = "openbsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64", target_arch = "riscv64")))'.dev-dependencies]
++[target.'cfg(all(not(target_vendor = "chimera"), not(target_os = "windows"), not(target_os = "openbsd"), any(target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64", target_arch = "riscv64")))'.dev-dependencies]
+ tikv-jemallocator = { workspace = true }
+-- 
+2.49.0
+

@@ -1,0 +1,29 @@
+--- a/Makefile
++++ b/Makefile
+@@ -99,8 +99,7 @@
+ 
+ MANFILES8 = \
+ 	tlp.8 \
+-	tlp-stat.8 \
+-	tlp.service.8
++	tlp-stat.8
+ 
+ MANFILESRDW8 = \
+ 	tlp-rdw.8
+@@ -187,7 +187,6 @@
+ endif
+ ifneq ($(TLP_NO_ZSHCOMP),1)
+ 	install -D -m 644 completion/zsh/_tlp $(_ZSHCPL)/_tlp
+-	install -D -m 644 completion/zsh/_tlp-radio-device $(_ZSHCPL)/_tlp-radio-device
+ 	install -D -m 644 completion/zsh/_tlp-run-on $(_ZSHCPL)/_tlp-run-on
+ 	install -D -m 644 completion/zsh/_tlp-stat $(_ZSHCPL)/_tlp-stat
+ endif
+@@ -219,7 +229,7 @@
+ 	install -d -m 755 $(_MAN)/man8
+ 	cd man-rdw && install -m 644 $(MANFILESRDW8) $(_MAN)/man8/
+ 
+-install: install-tlp install-rdw
++install: install-tlp install-rdw install-man
+ 
+ install-man: install-man-tlp install-man-rdw
+ 

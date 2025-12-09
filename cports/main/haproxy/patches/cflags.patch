@@ -1,0 +1,22 @@
+diff --git a/Makefile b/Makefile
+index cefee0f5d..7e020466b 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1032,7 +1032,7 @@ else
+ endif # non-empty target
+ 
+ haproxy: $(OPTIONS_OBJS) $(OBJS)
+-	$(cmd_LD) $(ARCH_FLAGS) $(LDFLAGS) -o $@ $^ $(LDOPTS)
++	$(cmd_LD) $(COPTS) $(ARCH_FLAGS) $(LDFLAGS) -o $@ $^ $(LDOPTS)
+ 
+ objsize: haproxy
+ 	$(Q)objdump -t $^|grep ' g '|grep -F '.text'|awk '{print $$5 FS $$6}'|sort
+@@ -1041,7 +1041,7 @@ objsize: haproxy
+ 	$(cmd_CC) $(COPTS) -c -o $@ $<
+ 
+ admin/halog/halog: admin/halog/halog.o admin/halog/fgets2.o src/ebtree.o src/eb32tree.o src/eb64tree.o src/ebmbtree.o src/ebsttree.o src/ebistree.o src/ebimtree.o
+-	$(cmd_LD) $(ARCH_FLAGS) $(LDFLAGS) -o $@ $^ $(LDOPTS)
++	$(cmd_LD) $(COPTS) $(ARCH_FLAGS) $(LDFLAGS) -o $@ $^ $(LDOPTS)
+ 
+ admin/dyncookie/dyncookie: admin/dyncookie/dyncookie.o
+ 	$(cmd_LD) $(ARCH_FLAGS) $(LDFLAGS) -o $@ $^ $(LDOPTS)

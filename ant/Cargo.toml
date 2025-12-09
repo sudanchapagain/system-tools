@@ -1,0 +1,32 @@
+[package]
+name = "ant"
+authors = ["Sudan Chapagain <sudanchapagain@proton.me>"]
+version = "0.1.0"
+edition = "2024"
+description = "declarative package management"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/sudanchapagain/ant"
+
+[profile.bench]
+lto = "thin"
+debug = 1
+strip = false
+
+[profile.release]
+debug = 0
+lto = true
+opt-level = 3
+codegen-units = 1
+strip = true
+
+[dependencies]
+clap = { version = "4.4.3", features = ["derive"] }
+colored = "2.0.4"
+fspp = "2.2.1"
+hashbrown = { version = "0.14.3", features = ["serde"] }
+hostname = "0.3.1"
+nanoid = "0.4.0"
+piglog = { version = "1.4.1", features = ["clap_derive"] }
+serde = { version = "1.0.188", features = ["derive"] }
+toml = "0.7.8"
+users = "0.11.0"
